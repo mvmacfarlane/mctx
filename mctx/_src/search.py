@@ -223,11 +223,12 @@ def expand(
   # Evaluate and create a new node.
   step, embedding = recurrent_fn(params, rng_key, action, embedding)
   chex.assert_shape(step.prior_logits, [batch_size, tree.num_actions])
+  chex.assert_shape(step.invalid_actions, [batch_size, tree.num_actions])
   chex.assert_shape(step.reward, [batch_size])
   chex.assert_shape(step.discount, [batch_size])
   chex.assert_shape(step.value, [batch_size])
   tree = update_tree_node(
-      tree, next_node_index, step.prior_logits, step.value, embedding)
+      tree, next_node_index, step.prior_logits, step.value, embedding, step.invalid_actions)
 
   # Return updated tree topology.
   return tree.replace(
@@ -304,7 +305,8 @@ def update_tree_node(
     node_index: chex.Array,
     prior_logits: chex.Array,
     value: chex.Array,
-    embedding: chex.Array) -> Tree[T]:
+    embedding: chex.Array,
+    invalid_actions: chex.Array,) -> Tree[T]:
   """Updates the tree at node index.
 
   Args:
@@ -327,6 +329,8 @@ def update_tree_node(
   updates = dict(  # pylint: disable=use-dict-literal
       children_prior_logits=batch_update(
           tree.children_prior_logits, prior_logits, node_index),
+      node_invalid_actions=batch_update(
+          tree.node_invalid_actions, invalid_actions, node_index),
       raw_values=batch_update(
           tree.raw_values, value, node_index),
       node_values=batch_update(
@@ -375,9 +379,10 @@ def instantiate_tree_from_root(
       children_discounts=jnp.zeros(batch_node_action, dtype=data_dtype),
       embeddings=jax.tree_util.tree_map(_zeros, root.embedding),
       root_invalid_actions=root_invalid_actions,
+      node_invalid_actions=jnp.zeros(batch_node_action, dtype=data_dtype),
       extra_data=extra_data)
 
   root_index = jnp.full([batch_size], Tree.ROOT_INDEX)
   tree = update_tree_node(
-      tree, root_index, root.prior_logits, root.value, root.embedding)
+      tree, root_index, root.prior_logits, root.value, root.embedding, root_invalid_actions)
   return tree

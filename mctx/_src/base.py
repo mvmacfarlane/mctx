@@ -39,11 +39,13 @@ class RecurrentFnOutput:
   prior_logits: `[B, num_actions]` the logits produced by a policy network.
   value: `[B]` an approximate value of the state after the state-action
     transition.
+  invalid actions: `[B]` actions to mask in the state that would lead to termination.
   """
   reward: chex.Array
   discount: chex.Array
   prior_logits: chex.Array
   value: chex.Array
+  invalid_actions: chex.Array
 
 
 Action = chex.Array

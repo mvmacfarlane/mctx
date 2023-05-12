@@ -72,6 +72,8 @@ def muzero_action_selection(
     action: the action selected from the given node.
   """
   visit_counts = tree.children_visits[node_index]
+  invalid_actions = tree.node_invalid_actions[node_index]
+
   node_visit = tree.node_visits[node_index]
   pb_c = pb_c_init + jnp.log((node_visit + pb_c_base + 1.) / pb_c_base)
   prior_logits = tree.children_prior_logits[node_index]
@@ -87,7 +89,10 @@ def muzero_action_selection(
   to_argmax = value_score + policy_score + node_noise_score
 
   # Masking the invalid actions at the root.
-  return masked_argmax(to_argmax, tree.root_invalid_actions * (depth == 0))
+  #return masked_argmax(to_argmax, tree.root_invalid_actions * (depth == 0))
+
+  #Masking the invalid actions at all nodes
+  return masked_argmax(to_argmax, invalid_actions)
 
 
 @chex.dataclass(frozen=True)
@@ -184,6 +189,7 @@ def gumbel_muzero_interior_action_selection(
   prior_logits = tree.children_prior_logits[node_index]
   chex.assert_equal_shape([visit_counts, prior_logits])
   completed_qvalues = qtransform(tree, node_index)
+  invalid_actions = tree.node_invalid_actions[node_index]
 
   # The `prior_logits + completed_qvalues` provide an improved policy,
   # because the missing qvalues are replaced by v_{prior_logits}(node).
@@ -192,7 +198,13 @@ def gumbel_muzero_interior_action_selection(
       visit_counts=visit_counts)
 
   chex.assert_rank(to_argmax, 1)
-  return jnp.argmax(to_argmax, axis=-1)
+
+
+  #return jnp.argmax(to_argmax, axis=-1)
+
+  #Masking the invalid actions at all nodes
+  return masked_argmax(to_argmax, invalid_actions)
+
 
 
 def masked_argmax(

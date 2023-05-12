@@ -69,6 +69,7 @@ class Tree(Generic[T]):
   children_values: chex.Array  # [B, N, num_actions]
   embeddings: Any  # [B, N, ...]
   root_invalid_actions: chex.Array  # [B, num_actions]
+  node_invalid_actions: chex.Array  # [B, N, num_actions]
   extra_data: T  # [B, ...]
 
   # The following attributes are class variables (and should not be set on
